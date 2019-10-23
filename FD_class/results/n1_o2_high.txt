@@ -1,0 +1,118 @@
+    1d Space-time wave equation, order-2:
+        c*dt/dx  = (0.4325
+        (dx, dt) = (0.004, 0.002)
+        (nx, nt) = (500, 500)
+        (Px, Pt) = (1, 1)
+
+
+ Num MPI tasks = 1
+
+ Num OpenMP threads = 1
+
+
+BoomerAMG SETUP PARAMETERS:
+
+ Max levels = 25
+ Num levels = 9
+
+ Strength Threshold = 0.100000
+ Interpolation Truncation Factor = 0.000000
+ Maximum Row Sum Threshold for Dependency Weakening = 0.900000
+
+ Coarsening Type = Falgout-CLJP 
+ measures are determined locally
+
+
+ No global partition option chosen.
+
+ Interpolation = one-point interpolation 
+ Restriction = local approximate ideal restriction (AIR-1.5)
+
+Operator Matrix Information:
+
+            nonzero         entries per row        row sums
+lev   rows  entries  sparse  min  max   avg       min         max
+===================================================================
+ 0  500000  5490000  0.000     1   11  11.0  -2.000e-03   1.000e+00
+ 1  249000  2731500  0.000     1   11  11.0  -2.000e-03   1.000e+00
+ 2  124000  2342500  0.000     1   19  18.9  -4.000e-03   1.000e+00
+ 3   61500  1641000  0.000     1   27  26.7  -7.999e-03   1.000e+00
+ 4   30500  1042000  0.001     1   35  34.2  -1.594e-02   1.000e+00
+ 5   15000   670500  0.003     1   47  44.7  -3.198e-02   1.000e+00
+ 6    7000   419500  0.009     1   67  59.9  -6.485e-02   1.000e+00
+ 7    3000   214500  0.024     1   95  71.5  -1.336e-01   1.000e+00
+ 8    1000    34500  0.035     1   68  34.5  -2.820e-01   1.000e+00
+
+
+Interpolation Matrix Information:
+                 entries/row    min     max         row sums
+lev  rows cols    min max     weight   weight     min       max 
+=================================================================
+ 0 500000 x 249000   0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 1 249000 x 124000   0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 2 124000 x 61500   0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 3 61500 x 30500   0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 4 30500 x 15000   0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 5 15000 x 7000    0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 6  7000 x 3000    0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+ 7  3000 x 1000    0   1   1.000e+00 0.000e+00 0.000e+00 1.000e+00
+
+
+     Complexity:    grid = 1.982000
+                operator = 2.656831
+                memory = 2.835792
+
+
+
+
+BoomerAMG SOLVER PARAMETERS:
+
+  Maximum number of cycles:         250 
+  Stopping Tolerance:               1.000000e-08 
+  Cycle type (0 = F, 1 = V, 2 = W.):  0
+
+  Relaxation Parameters:
+   Visiting Grid:                     down   up  coarse
+            Number of sweeps:            0    2     1 
+   Type 0=Jac, 3=hGS, 6=hSGS, 9=GE:     10   10    10 
+   Point types, partial sweeps (1=C, -1=F):
+                  Pre-CG relaxation (down):
+                   Post-CG relaxation (up):  -1   0
+                             Coarsest grid:   0
+
+
+
+BoomerAMG SOLVER PARAMETERS:
+
+  Maximum number of cycles:         250 
+  Stopping Tolerance:               1.000000e-08 
+  Cycle type (0 = F, 1 = V, 2 = W.):  0
+
+  Relaxation Parameters:
+   Visiting Grid:                     down   up  coarse
+            Number of sweeps:            0    2     1 
+   Type 0=Jac, 3=hGS, 6=hSGS, 9=GE:     10   10    10 
+   Point types, partial sweeps (1=C, -1=F):
+                  Pre-CG relaxation (down):
+                   Post-CG relaxation (up):  -1   0
+                             Coarsest grid:   0
+
+ Output flag (print_level): 3 
+
+
+AMG SOLUTION INFO:
+                                            relative
+               residual        factor       residual
+               --------        ------       --------
+    Initial    1.284744e+02                 1.149110e+01
+    Cycle  1   1.418011e-12    0.000000     1.268308e-13 
+
+
+ Average Convergence Factor = 0.000000
+
+     Complexity:    grid = 1.982000
+                operator = 2.656831
+                   cycle = 3.650546
+
+
+

@@ -1,0 +1,208 @@
+
+
+Hi Ben,
+
+ 
+
+Some answers:
+
+ 
+
+If you use NODE, several processors may “share” some of the nodal unknowns.  Internally, we will store only one copy of them, but you need to pretend like all of the processors own that data and set all stencil values, rhs values, etc. on each of the processors that shares those unknowns or cooperate with neighboring processors to set those values through AddToValues() calls such as in finite element stiffness matrix assembly.  You can always fake a nodal problem with CELL.  Just choose whatever is most natural for you.
+
+ 
+
+The size of the period is global.  You want the grid to wrap around on itself at global grid boundaries, not processor subgrid boundaries.
+
+ 
+
+You most likely don’t need to adjust stencil entries in the periodic direction.  See next answer.
+
+ 
+
+When you are using hypre, you are really only setting rows of a fully discretized matrix.  The “language” for specifying those rows is in terms of grids and stencils, but hypre doesn’t know anything about your physical problem or discretization.  Just keep this in mind when you are setting/adjusting stencil entries and updating rhs values.  For example, a matrix row that corresponds to a Dirichlet boundary will have only some of the stencil entries present (think the first row of a 1D Laplacian; it only has one 2 and one -1; the “west” coefficient is not present, so think of it as being zero and set it as such).  If that row corresponds to a periodic BC, then all of the stencil entries may be present, but they will appear in funny places of the matrix (recall the 1D Laplacian; you will have the same 2 and -1 as for Dirichlet, with the “west” coefficient appearing at the very end of the row as a -1, because it wraps around to the other side of the grid).
+
+ 
+
+Hope this helps!
+
+ 
+
+-Rob
+
+ 
+
+From: Ben Southworth <ben.s.southworth@gmail.com>
+Sent: Friday, February 8, 2019 3:53 PM
+To: Falgout, Rob <falgout2@llnl.gov>
+Cc: Yang, Ulrike Meier <yang11@llnl.gov>
+Subject: Re: hypre laplace questions
+
+ 
+
+This is great, thanks Rob! I am building a C++ class to look at space-time hyperbolics and pAIR using the SStruct interface. I made it pretty far, but not have a few more specific questions I'm stuck on:
+
+- There are types of HYPRE_SStructVariable that you must set. In the diffusion examples, they seem to use HYPRE_SSTRUCT_VARIABLE_CELL, which I take to be cell-centered. I always understood FD discretizations as being vertex/node-based, which seems to correspond with HYPRE_SSTRUCT_VARIABLE_NODE? Can you clarify what these are/what I should use? I cannot find any information on these types in the reference manual.
+
+- From the ref manual, "periodic is an ndim-dimensional integer array that contains the periodicity for each dimension." If I want periodic once over the global domain in x, will the periodicity be the global number of DOFs in x? So nx_local*Px, where nx_local is the number of cells in x on each processor and Px the number of processors in the x-dimension?
+
+- If I set the periodic BCs, do I not need to go through and modify BCs in x, like is done in Ex. 3/Ex. 9? I.e., does the periodic function fully handle those boundaries in terms of the matrix stencils?
+
+- I'm a little confused on how general BCs are handled. Suppose I have nonzero Dirichlet that I want to move to the rhs. It looks like you set the forcing function values via HYPRE_SStructVectorSetBoxValues. Then I would think go through and use HYPRE_SStructVectorAddToBoxValues to account for BCs on the RHS. However, the examples seem to primarily reset BCs in some sense because they just call HYPRE_SStructVectorSetBoxValues. Also, if I eliminate BCs, do I just set that part of the stencil to zero in the matrix structure?
+
+Thanks!
+
+On 2/8/19 9:32 AM, Falgout, Rob wrote:
+
+    Yes and yes.  In the SStruct interface, there is a SetPeriodic function that can take care of that.  What it does is to make the grid periodic (it wraps around on itself) so that stencil entries that reach outside of the domain will naturally “wrap around” and couple to unknowns on the other side of the domain.  This will all get translated correctly to the ParCSR matrix you then generate from it.  Regarding the processor grid, if you are writing the driver, then you have complete control over the distribution of the grid boxes on processors.
+
+     
+
+    Hope this helps!
+
+     
+
+    -Rob
+
+     
+
+    From: Ben Southworth <ben.s.southworth@gmail.com>
+    Sent: Friday, February 8, 2019 9:29 AM
+    To: Falgout, Rob <falgout2@llnl.gov>
+    Subject: Re: hypre laplace questions
+
+     
+
+    Oof, I should have talked to you guys first! There I was trying to reinvent
+    the wheel this week. I have not used the SStruct interface before, but it
+    is exactly what I need. Few questions before I start playing with it:
+
+        - Examples use N^2 processors (i.e., perfect square). Can I pass in
+        processors in x and t, say Px, Pt, and make my own processor grid?
+
+        - Is there a way to support periodic BCs in space?
+
+    Thanks for the help!
+    -ben
+
+    On 2/8/19 8:28 AM, Falgout, Rob wrote:
+
+        Yes.  The best way to set this up is to use one of the user-level system interfaces (e.g., IJ or SStruct).  The latter is ideal for structured grid situations and it can also produce a ParCSR matrix to use with pAIR.
+
+         
+
+        -Rob
+
+         
+
+        From: Ben Southworth <ben.s.southworth@gmail.com>
+        Sent: Friday, February 8, 2019 8:22 AM
+        To: Falgout, Rob <falgout2@llnl.gov>; Yang, Ulrike Meier <yang11@llnl.gov>
+        Subject: Re: hypre laplace questions
+
+         
+
+        Thanks Rob. Yea, I am trying to implement a FD discretization
+        of the space-time wave equation on a structured grid and hook
+        it up to pAIR. Looks like I may be working harder than needed.
+        Based on the pacsr_ls laplace files, I was manually constructing
+        the diagonal and off-diagonal CSR matrices.
+
+        In Ex 5, it looks like the IJ matrix interface can be used with a
+        local CSR-like structure (diagonal and off-diagonal blocks) and
+        global column numbering (i.e., don't need to be aware of on-
+        or off-processor). I believe I have used this before too, but
+        forgot..
+
+        Ex 5 also appears to be globally lexographic ordering, i.e., if you
+        have a 10x10 grid and 10 processors, each processor will own
+        rows associated with a 10x1 spatial strip. Does that sound right?
+        For the wave equation I think I will need a block partitioning,
+        where each processor owns a roughly equal size block/cube in
+        spacetime, but that just requires the right mapping function for
+        DOFs.
+
+        On 2/8/19 7:54 AM, Falgout, Rob wrote:
+
+            Hi Ben,
+
+             
+
+            I’m not sure the ‘par_laplace*’ files in the parcsr_ls are used anymore or correspond to something you should emulate.  Ulrike should have the final say on that, though.  I think you would be better off modeling your code after one of the drivers in ‘test’ or one of the drivers in ‘examples’.  Is your main goal just to write a driver?
+
+             
+
+            -Rob
+
+             
+
+             
+
+            From: Ben Southworth <ben.s.southworth@gmail.com>
+            Sent: Friday, February 8, 2019 7:26 AM
+            To: Yang, Ulrike Meier <yang11@llnl.gov>; Falgout, Rob <falgout2@llnl.gov>
+            Subject: hypre laplace questions
+
+             
+
+            Hi Ulrike, I am writing a parallel finite difference scheme and using the
+            hypre Laplace code as a model. I have a few (hopefully simple) questions
+            and Rob suggested that I reach out to you. I ma looking in par_laplace.c
+            and par_laplace_9pt.c in the parcsr_ls folder.
+
+            First, in the lines
+
+                diag = hypre_ParCSRMatrixDiag(A);
+                hypre_CSRMatrixI(diag) = diag_i;
+                hypre_CSRMatrixJ(diag) = diag_j;
+                hypre_CSRMatrixData(diag) = diag_data;
+
+            diag_i, diag_j, and diag_data are pointers. I'm doing this in C++ and
+            will declare the pointers/arrays myself. Does the hypre CSR matrix take
+            ownership of the data/delete it when the hypre_CSRMatrix structure is
+            out of scope/deleted? I.e., I will allocate an array, diag_i, but not delete
+            it after I give it to hypre_CSRMatrixI(diag)?
+
+            Second, what the heck does the following code do?
+
+                   /*--------------------------------------------------------------
+                   // TODO: What does this do?
+                    -------------------------------------------------------------*/
+                   int P_busy = hypre_min(nx,P);
+                   int Q_busy = hypre_min(nt,Q);
+                   int num_cols_offd = 0;
+                   if (p) num_cols_offd += nt_local;
+                   if (p < P_busy-1) num_cols_offd += nt_local;
+                   if (q) num_cols_offd += nx_local;
+                   if (q < Q_busy-1) num_cols_offd += nx_local;
+                   if (p && q) num_cols_offd++;
+                   if (p && q < Q_busy-1 ) num_cols_offd++;
+                   if (p < P_busy-1 && q ) num_cols_offd++;
+                   if (p < P_busy-1 && q < Q_busy-1 ) num_cols_offd++;
+
+                   if (!local_num_rows) num_cols_offd = 0;
+
+                   col_map_offd = hypre_CTAlloc(HYPRE_Int,  num_cols_offd, HYPRE_MEMORY_HOST);
+
+                   if (num_procs > 1) {
+                      for (int i=0; i < num_cols_offd; i++) {
+                         col_map_offd[i] = offd_j[i];
+                      }
+                   
+                      hypre_qsort0(col_map_offd, 0, num_cols_offd-1);
+
+                      for (int i=0; i < num_cols_offd; i++) {
+                         for (int j=0; j < num_cols_offd; j++) {
+                            if (offd_j[i] == col_map_offd[j]) {
+                               offd_j[i] = j;
+                               break;
+                            }
+                         }
+                      }
+                   }
+
+            It seems to remap the column indices for the off-diagonal blocks, but I
+            can't figure out why/how they're being mapped.
+
+            Any help is greatly appreciated!
+            -ben
